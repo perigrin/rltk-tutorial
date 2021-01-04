@@ -5,7 +5,7 @@ use std::cmp::{max, min};
 
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
-    let players = ecs.write_storage::<Player>();
+    let players = ecs.read_storage::<Player>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
     let entities = ecs.entities();
     let combat_stats = ecs.read_storage::<CombatStats>();
@@ -26,8 +26,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
 
         for potential_target in map.tile_content[destination_idx].iter() {
             let target = combat_stats.get(*potential_target);
-            if let Some(_t) = target {
-                // Attack it
+            if let Some(_target) = target {
                 wants_to_melee
                     .insert(
                         entity,
@@ -36,7 +35,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
                         },
                     )
                     .expect("Add target failed");
-                return; // don't try to move after attacking
+                return;
             }
         }
 
@@ -74,9 +73,12 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
             }
 
             // Diagonals
-            VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => try_move_player(-1, -1, &mut gs.ecs),
-            VirtualKeyCode::Numpad7 | VirtualKeyCode::U => try_move_player(1, -1, &mut gs.ecs),
+            VirtualKeyCode::Numpad9 | VirtualKeyCode::U => try_move_player(1, -1, &mut gs.ecs),
+
+            VirtualKeyCode::Numpad7 | VirtualKeyCode::Y => try_move_player(-1, -1, &mut gs.ecs),
+
             VirtualKeyCode::Numpad3 | VirtualKeyCode::N => try_move_player(1, 1, &mut gs.ecs),
+
             VirtualKeyCode::Numpad1 | VirtualKeyCode::B => try_move_player(-1, 1, &mut gs.ecs),
 
             _ => return RunState::AwaitingInput,

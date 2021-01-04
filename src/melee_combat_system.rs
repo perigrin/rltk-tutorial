@@ -1,9 +1,10 @@
-use super::{CombatStats, GameLog, Name, SufferDamage, WantsToMelee};
+use super::{gamelog::GameLog, CombatStats, Name, SufferDamage, WantsToMelee};
 use specs::prelude::*;
 
 pub struct MeleeCombatSystem {}
 
 impl<'a> System<'a> for MeleeCombatSystem {
+    #[allow(clippy::type_complexity)]
     type SystemData = (
         Entities<'a>,
         WriteExpect<'a, GameLog>,
@@ -41,6 +42,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                 }
             }
         }
+
         wants_melee.clear();
     }
 }

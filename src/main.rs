@@ -5,7 +5,7 @@ pub use components::*;
 mod map;
 pub use map::*;
 mod player;
-pub use player::*;
+use player::*;
 mod rect;
 pub use rect::Rect;
 mod visibility_system;
@@ -19,7 +19,6 @@ use melee_combat_system::MeleeCombatSystem;
 mod damage_system;
 use damage_system::DamageSystem;
 mod gamelog;
-use gamelog::GameLog;
 mod gui;
 
 #[derive(PartialEq, Copy, Clone)]
@@ -53,7 +52,6 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
-
         let mut newrunstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
@@ -65,7 +63,9 @@ impl GameState for State {
                 self.run_systems();
                 newrunstate = RunState::AwaitingInput;
             }
-            RunState::AwaitingInput => newrunstate = player_input(self, ctx),
+            RunState::AwaitingInput => {
+                newrunstate = player_input(self, ctx);
+            }
             RunState::PlayerTurn => {
                 self.run_systems();
                 newrunstate = RunState::MonsterTurn;
@@ -83,7 +83,6 @@ impl GameState for State {
         damage_system::delete_the_dead(&mut self.ecs);
 
         draw_map(&self.ecs, ctx);
-        gui::draw_ui(&self.ecs, ctx);
 
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
@@ -92,9 +91,11 @@ impl GameState for State {
         for (pos, render) in (&positions, &renderables).join() {
             let idx = map.xy_idx(pos.x, pos.y);
             if map.visible_tiles[idx] {
-                ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph)
             }
         }
+
+        gui::draw_ui(&self.ecs, ctx);
     }
 }
 
@@ -104,9 +105,7 @@ fn main() -> rltk::BError {
         .with_title("Roguelike Tutorial")
         .build()?;
     context.with_post_scanlines(true);
-
     let mut gs = State { ecs: World::new() };
-
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
@@ -121,7 +120,6 @@ fn main() -> rltk::BError {
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
 
-    // add player
     let player_entity = gs
         .ecs
         .create_entity()
@@ -141,7 +139,7 @@ fn main() -> rltk::BError {
             dirty: true,
         })
         .with(Name {
-            name: "Hiro".to_string(),
+            name: "Player".to_string(),
         })
         .with(CombatStats {
             max_hp: 30,
@@ -151,7 +149,6 @@ fn main() -> rltk::BError {
         })
         .build();
 
-    // add monsters
     let mut rng = rltk::RandomNumberGenerator::new();
     for (i, room) in map.rooms.iter().skip(1).enumerate() {
         let (x, y) = room.center();
@@ -174,7 +171,7 @@ fn main() -> rltk::BError {
             .create_entity()
             .with(Position { x, y })
             .with(Renderable {
-                glyph: glyph,
+                glyph,
                 fg: RGB::named(rltk::RED),
                 bg: RGB::named(rltk::BLACK),
             })
@@ -202,7 +199,7 @@ fn main() -> rltk::BError {
     gs.ecs.insert(player_entity);
     gs.ecs.insert(RunState::PreRun);
     gs.ecs.insert(gamelog::GameLog {
-        entries: vec!["Welcome to Perigrin's Rusty Roguelike".to_string()],
+        entries: vec!["Welcome to Rusty Roguelike".to_string()],
     });
 
     rltk::main_loop(context, gs)
