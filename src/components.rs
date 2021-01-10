@@ -1,6 +1,6 @@
 use rltk::RGB;
 use specs::prelude::*;
-use specs_derive::Component;
+use specs_derive::*;
 
 #[derive(Component)]
 pub struct Position {
@@ -13,21 +13,29 @@ pub struct Renderable {
     pub glyph: rltk::FontCharType,
     pub fg: RGB,
     pub bg: RGB,
+    pub render_order: i32,
 }
 
 #[derive(Component, Debug)]
 pub struct Player {}
 
-#[derive(Component, Debug)]
-pub struct Monster {}
+#[derive(Component)]
+pub struct Viewshed {
+    pub visible_tiles: Vec<rltk::Point>,
+    pub range: i32,
+    pub dirty: bool,
+}
 
 #[derive(Component, Debug)]
-pub struct BlocksTile {}
+pub struct Monster {}
 
 #[derive(Component, Debug)]
 pub struct Name {
     pub name: String,
 }
+
+#[derive(Component, Debug)]
+pub struct BlocksTile {}
 
 #[derive(Component, Debug)]
 pub struct CombatStats {
@@ -37,16 +45,9 @@ pub struct CombatStats {
     pub power: i32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct WantsToMelee {
     pub target: Entity,
-}
-
-#[derive(Component)]
-pub struct Viewshed {
-    pub visible_tiles: Vec<rltk::Point>,
-    pub range: i32,
-    pub dirty: bool,
 }
 
 #[derive(Component, Debug)]
@@ -65,4 +66,33 @@ impl SufferDamage {
             store.insert(victim, dmg).expect("Unable to insert damage");
         }
     }
+}
+
+#[derive(Component, Debug)]
+pub struct Item {}
+
+#[derive(Component, Debug)]
+pub struct Potion {
+    pub heal_amount: i32,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct InBackpack {
+    pub owner: Entity,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct WantsToPickupItem {
+    pub collected_by: Entity,
+    pub item: Entity,
+}
+
+#[derive(Component, Debug)]
+pub struct WantsToDrinkPotion {
+    pub potion: Entity,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct WantsToDropItem {
+    pub item: Entity,
 }

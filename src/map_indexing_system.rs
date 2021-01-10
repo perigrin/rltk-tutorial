@@ -19,14 +19,14 @@ impl<'a> System<'a> for MapIndexingSystem {
         for (entity, position) in (&entities, &position).join() {
             let idx = map.xy_idx(position.x, position.y);
 
-            // if they block, update the blocking list
+            // If they block, update the blocking list
             let _p: Option<&BlocksTile> = blockers.get(entity);
             if let Some(_p) = _p {
                 map.blocked[idx] = true;
             }
 
-            // Push the entity to the appropriate index slog. I'ts a Copy type so we don't need to
-            // clone it (we want to avoid moving it out of the ECS!)
+            // Push the entity to the appropriate index slot. It's a Copy
+            // type, so we don't need to clone it (we want to avoid moving it out of the ECS!)
             map.tile_content[idx].push(entity);
         }
     }
