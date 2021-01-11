@@ -71,7 +71,7 @@ impl<'a> System<'a> for ItemUseSystem {
             mut gamelog,
             map,
             entities,
-            mut wants_useitem,
+            mut wants_use,
             names,
             consumables,
             healing,
@@ -82,8 +82,10 @@ impl<'a> System<'a> for ItemUseSystem {
             mut confused,
         ) = data;
 
-        for (entity, useitem) in (&entities, &wants_useitem).join() {
+        for (entity, useitem) in (&entities, &wants_use).join() {
             let mut used_item = true;
+
+            // Targeting
             let mut targets: Vec<Entity> = Vec::new();
             match useitem.target {
                 None => {
@@ -117,6 +119,52 @@ impl<'a> System<'a> for ItemUseSystem {
                 }
             }
 
+            // If it heals, apply the healing
+            let item_heals = healing.get(useitem.item);
+            match item_heals {
+                None => {}
+                Some(healer) => {
+                    used_item = false;
+                    for target in targets.iter() {
+                        let stats = combat_stats.get_mut(*target);
+                        if let Some(stats) = stats {
+                            stats.hp = i32::min(stats.max_hp, stats.hp + healer.heal_amount);
+                            if entity == *player_entity {
+                                gamelog.entries.push(format!(
+                                    "You use the {}, healing {} hp.",
+                                    names.get(useitem.item).unwrap().name,
+                                    healer.heal_amount
+                                ));
+                            }
+                            used_item = true;
+                        }
+                    }
+                }
+            }
+
+            // If it inflicts damage, apply it to the target cell
+            let item_damages = inflict_damage.get(useitem.item);
+            match item_damages {
+                None => {}
+                Some(damage) => {
+                    used_item = false;
+                    for mob in targets.iter() {
+                        SufferDamage::new_damage(&mut suffer_damage, *mob, damage.damage);
+                        if entity == *player_entity {
+                            let mob_name = names.get(*mob).unwrap();
+                            let item_name = names.get(useitem.item).unwrap();
+                            gamelog.entries.push(format!(
+                                "You use {} on {}, inflicting {} hp.",
+                                item_name.name, mob_name.name, damage.damage
+                            ));
+                        }
+
+                        used_item = true;
+                    }
+                }
+            }
+
+            // Can it pass along confusion? Note the use of scopes to escape from the borrow checker!
             let mut add_confusion = Vec::new();
             {
                 let causes_confusion = confused.get(useitem.item);
@@ -144,54 +192,19 @@ impl<'a> System<'a> for ItemUseSystem {
                     .expect("Unable to insert status");
             }
 
-            let item_damages = inflict_damage.get(useitem.item);
-            match item_damages {
-                None => {}
-                Some(damage) => {
-                    used_item = false;
-                    for mob in targets.iter() {
-                        SufferDamage::new_damage(&mut suffer_damage, *mob, damage.damage);
-                        if entity == *player_entity {
-                            let mob_name = names.get(*mob).unwrap();
-                            let item_name = names.get(useitem.item).unwrap();
-                            gamelog.entries.push(format!(
-                                "You use {} on {}, inflicting {} hp.",
-                                item_name.name, mob_name.name, damage.damage
-                            ))
-                        }
-                        used_item = true;
+            // If its a consumable, we delete it on use
+            if used_item {
+                let consumable = consumables.get(useitem.item);
+                match consumable {
+                    None => {}
+                    Some(_) => {
+                        entities.delete(useitem.item).expect("Delete failed");
                     }
-                }
-            }
-            let healer = healing.get(useitem.item);
-            match healer {
-                None => {}
-                Some(healer) => {
-                    for target in targets.iter() {
-                        let stats = combat_stats.get_mut(*target);
-                        if let Some(stats) = stats {
-                            stats.hp = i32::min(stats.max_hp, stats.hp + healer.heal_amount);
-                            if entity == *player_entity {
-                                gamelog.entries.push(format!(
-                                    "You use the {}, healing {} hp.",
-                                    names.get(useitem.item).unwrap().name,
-                                    healer.heal_amount
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-
-            let consumable = consumables.get(useitem.item);
-            match consumable {
-                None => {}
-                Some(_) => {
-                    entities.delete(useitem.item).expect("Delete failed");
                 }
             }
         }
-        wants_useitem.clear();
+
+        wants_use.clear();
     }
 }
 
