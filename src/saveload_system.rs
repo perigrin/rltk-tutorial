@@ -54,7 +54,7 @@ pub fn save_game(ecs : &mut World) {
             EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door,
             Quips, Attributes, Skills, Pools, NaturalAttackDefense, LootTable,
             OtherLevelPosition, DMSerializationHelper, LightSource, Initiative, MyTurn, Faction,
-            WantsToApproach, WantsToFlee, MoveMode, Chasing
+            WantsToApproach, WantsToFlee, MoveMode, Chasing, EquipmentChanged, Vendor
         );
     }
 
@@ -108,7 +108,7 @@ pub fn load_game(ecs: &mut World) {
             EntryTrigger, EntityMoved, SingleActivation, BlocksVisibility, Door,
             Quips, Attributes, Skills, Pools, NaturalAttackDefense, LootTable,
             OtherLevelPosition, DMSerializationHelper, LightSource, Initiative, MyTurn, Faction,
-            WantsToApproach, WantsToFlee, MoveMode, Chasing
+            WantsToApproach, WantsToFlee, MoveMode, Chasing, EquipmentChanged, Vendor
         );
     }
 
@@ -123,7 +123,7 @@ pub fn load_game(ecs: &mut World) {
         for (e,h) in (&entities, &helper).join() {
             let mut worldmap = ecs.write_resource::<super::map::Map>();
             *worldmap = h.map.clone();
-            worldmap.tile_content = vec![Vec::new(); (worldmap.height * worldmap.width) as usize];
+            crate::spatial::set_size((worldmap.height * worldmap.width) as usize);
             deleteme = Some(e);
         }
         for (e,h) in (&entities, &helper2).join() {
